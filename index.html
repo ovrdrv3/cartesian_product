@@ -1,0 +1,213 @@
+<html>
+<head>
+    <title>Code Combination Creator</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+</head>
+<body>
+    <div class="container" style="padding-top:20px;padding-bottom:10px">
+        <form class="form-inline">
+
+            <label class="sr-only" for="static-code">Static Code</label>
+            <input type="text" class="form-control mb-2 mr-sm-2 mb-sm-0" id="static-code" placeholder="Static Code">
+
+            <label class="sr-only" for="config-num-of-sets">Number of Sets</label>
+            <input type="text" class="form-control mb-2 mr-sm-2 mb-sm-0" id="config-num-of-sets" placeholder="# of sets you'd like">
+
+            <button type="submit" id="create-set-button" class="btn btn-primary">Create</button>
+
+        </form>
+
+        <div class="row" id="variableContent"></div>
+
+        <br>
+        <div>
+            <input type="submit" name="g" value="Submit" id="create-results" class="btn btn-primary form-control">
+        </div>
+        </form>
+        <div class="container">
+            <h1>CSV</h1>
+            <pre id="csv"></pre>
+        </div>
+    <!-- Container -->
+    </div>
+
+
+    <script type="text/javascript" src="http://code.jquery.com/jquery-latest.js"></script>
+    <script type="text/javascript">
+    // Simple JSON to CSV Converter
+    function ConvertToCSV(objArray) {
+        // Use JSON.parse if the arg is not alread an object.
+        var array = typeof objArray != 'object' ? JSON.parse(objArray) : objArray;
+        var str = '';
+
+        for (var i = 0; i < array.length; i++) {
+            var line = '';
+            for (var index in array[i]) {
+                // if this isnt the first iteration add a comma to the end of it
+                if (line != '') line += ',';
+                line += array[i][index];
+            }
+            str += line + '\r\n';
+        }
+        return str;
+    }
+
+    // Spread Syntax MDN https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Operators/Spread_operator#A_better_apply
+    // Cartesian product function
+    let f = (a, b) => [].concat(...a.map(a => b.map(b => [].concat(a, b))));
+    let cartesian = (a, b, ...c) => b ? cartesian(f(a, b), ...c) : a;
+
+
+    // Serialize data function
+    function objectifyForm(formArray) {
+        var returnArray = [[]];
+        for (var i = 0; i < formArray.length; i++){
+            returnArray[i] = formArray[i]['value'];
+        }
+          return returnArray;
+    }
+    // maybe jquery can count how many rows in a table have been added for all 6 groups and then for that amount the elements can be added to that array[index] and sumArray[index] concurrently, also rememeber that we need to re-write the json data on a data update.
+
+    function clearVariableContent(){
+        $("#variableContent").html("");
+    }
+
+
+    $(document).ready(function () {
+        // Create the sets
+        $( "#create-set-button" ).click(function(e){
+            e.preventDefault();
+            clearVariableContent();
+            // parseInt guarantees .val() will return a number, even though input is a text field. 2nd arg means base10.
+            // Make numOfSets a global variable for use later
+            numOfSets = parseInt($( "#config-num-of-sets" ).val(), 10);;
+            staticStr = $("#static-code").val().toUpperCase();
+            // console.log(numOfSets);
+
+            for (var i = 1; i < numOfSets + 1; i++) {
+                var currentSetId = "set" + i.toString()
+                // Prepare rowSet pieces
+                var header = $("<h3></h3>").append("Set " +  i.toString() );;
+                var button = $("<button></button>")
+                    .addClass("btn btn-primary btn-block newrowbutton")
+                    .attr("type","button")
+                    .attr("name","newrow")
+                    .html("New Row");
+                var breakUnderButton = $("<br>").attr("id","br-for-" +currentSetId)
+                    .addClass("row-one-under-here");
+
+                // Maybe we can set class based on the amount of rows coming in so that more monitor space can be filled on screen.
+                var rowSet = $("<div></div>")
+                    .addClass("col-md-6")
+                    .attr("id", currentSetId)
+                    .append(header)
+                    .append(button)
+                    .append(breakUnderButton);
+                //Build either on variableContent div or the last div created.
+                if(i == 1){
+                    $("#variableContent").append(rowSet);
+                } else {
+                    $("#set" + (i-1).toString() ).after(rowSet);
+                }
+            }
+
+
+            // Associate the "New Row" buttons to an add row function.
+            $(".newrowbutton").click(function(e){
+                // $('.row-for-: + last').after('<div class="row-for-" + ><input type="text" name="in" class="sum1"><input type="text" name="in" class="desc1"></div>');
+                var targetID = e.target.parentElement.id;
+                // console.log(targetID + " has been clicked.");
+                // Build the new row
+                var newRow = $('<div></div>').addClass('row-for-' + targetID );
+                // Set count to the last character of the parent id
+                var count = targetID.charAt(targetID.length - 1);
+                var sumInput = $("<input></input>")
+                    .addClass("sum" + count + " col-md-2")
+                    .attr("name", "in")
+                    .attr("type", "text");
+                var descInput = $("<input></input>")
+                    .addClass("desc" + count + " col-md-10")
+                    .attr("name", "in")
+                    .attr("type", "text");
+                newRow.append(sumInput);
+                newRow.append(descInput);
+                // If a row with this id and class does not yet exist
+
+                if ($("#" + "first-row-for-" + targetID).length > 0) {
+                    // Not making first row anymore
+                    $(".row-for-" + targetID + ":last").after(newRow);
+                } else {
+                    // console.log("We are going into the first row")
+                    // Use the br attrs to make the first row
+                    $("#br-for-" + targetID + ".row-one-under-here")
+                    .after(newRow.attr("id", "first-row-for-" + targetID ));
+                }
+            });
+        // End of "Create the sets" function.
+        });
+
+
+        // Take all new data on submit click and organize it into something useful.
+        $( "#create-results" ).click(function(e) {
+            e.preventDefault();
+
+            var sumArgs = [];
+            var descArgs = [];
+
+            for (var i = 0; i < numOfSets; i++) {
+
+                var sumPiece =  objectifyForm($( ".sum" + (i+1).toString() ).serializeArray());
+                sumArgs[i] = sumPiece;
+
+                var descPiece =  objectifyForm($( ".desc" + (i+1).toString() ).serializeArray());
+                for (var index in descPiece) {
+                        descPiece[index] = "\"" + descPiece[index] + "\"";
+                }
+                descArgs[i] = descPiece;
+            }
+
+            var sumArray =  cartesian(...sumArgs);
+            var descArray =  cartesian(...descArgs);
+            var codeStringArray = [];
+            var fullArray = [];
+
+            // items[0].push("VVHD")
+            // console.log(items);
+
+            if (descArray.length == sumArray.length) {
+                sumArray.forEach(function(element, index) {
+                    // Put the sums together to create the appeal code as it would be on the RD
+                    codeStringArray[index] = staticStr + sumArray[index].join('');
+                    // Make a "full array" which will contain all related elements to make csv file.
+                    fullArray.push(codeStringArray[index] + "," + sumArray[index] + "," + descArray[index]);
+                    fullArray[index] = fullArray[index].split(',');
+                });
+                // console.log(fullArray);
+            }
+
+            // Convert Object to JSON (Also make this a global variable for the #csv . click function)
+            finalResult = JSON.stringify(fullArray);
+
+            // Display JSON
+            // $('#json').text(finalResult);
+            finalResult = ConvertToCSV(finalResult);
+
+            // Convert JSON to CSV & Display CSV
+            $('#csv').text(finalResult);
+        });
+
+        $('#csv').click(function(e){
+
+            var hiddenElement = document.createElement('a');
+            hiddenElement.href = 'data:attachment/text,' + encodeURI(finalResult);
+            hiddenElement.target = '_blank';
+            hiddenElement.download = 'data.csv';
+            hiddenElement.click();
+
+        });
+    });
+
+    </script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+</body>
+</html>
